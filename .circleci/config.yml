@@ -25,7 +25,7 @@ commands:
     parameters:
       workflow_id:
         type: string 
-        default: ${CIRCLE_WORKFLOW_ID:0:7}   
+        default: ${CIRCLE_WORKFLOW_ID}   
     steps:
       - run:
           name: Revert migrations
@@ -36,15 +36,15 @@ commands:
             echo $SUCCESS
             if(( $SUCCESS==1 )); 
             then
-            cd ~/project/backend
-            npm install
-            npm run migrations:revert
+              cd ~/project/backend
+              npm install
+              npm run migrations:revert
             fi
             
 jobs:
   build-frontend:
     docker:
-      - image: circleci/node:13.8.0
+      - image: cimg/node:13.8.0
     steps:
       - checkout
       - restore_cache:
@@ -61,7 +61,7 @@ jobs:
 
   build-backend:
     docker:
-      - image: circleci/node:13.8.0
+      - image: cimg/node:13.8.0
     steps:
       - checkout
       - restore_cache:
@@ -69,24 +69,7 @@ jobs:
       - run:
           name: Back-end build
           command: |
-            cat \<< EOF > backend/.env
-            ENVIRONMENT=production
-            VERSION=1
-            TYPEORM_CONNECTION=postgres
-            TYPEORM_MIGRATIONS_DIR=./src/migrations
-            TYPEORM_ENTITIES=./src/modules/domain/**/*.entity.ts
-            TYPEORM_MIGRATIONS=./src/migrations/*.ts
-            TYPEORM_HOST=${TYPEORM_HOST}
-            TYPEORM_PORT=${TYPEORM_PORT}
-            TYPEORM_USERNAME=${TYPEORM_USERNAME}
-            TYPEORM_PASSWORD=${TYPEORM_PASSWORD}
-            TYPEORM_DATABASE=${TYPEORM_DATABASE}
-            EOF
-      - run:
-          name: Back-end build
-          command: |
             cd backend
-            cat .env
             npm install
             npm run build
       - save_cache:
@@ -96,7 +79,7 @@ jobs:
 
   test-frontend:
     docker:
-      - image: circleci/node:13.8.0
+      - image: cimg/node:13.8.0
     steps:
       - checkout
       - restore_cache:
@@ -110,7 +93,7 @@ jobs:
                 
   test-backend:
     docker:
-      - image: circleci/node:13.8.0
+      - image: cimg/node:13.8.0
     steps:
       - checkout
       - restore_cache:
@@ -119,11 +102,12 @@ jobs:
           name: backend tests
           command: |
             cd backend
+            npm install
             npm run test
             
   scan-frontend:
     docker:
-      - image: circleci/node:13.8.0
+      - image: cimg/node:13.8.0
     steps:
       - checkout
       - restore_cache:
@@ -132,11 +116,13 @@ jobs:
           name: frontend scan
           command: |
             cd frontend
+            npm install
+            npm audit fix --force --audit-level=critical
             npm audit --audit-level=critical
 
   scan-backend:
     docker:
-      - image: circleci/node:13.8.0
+      - image: cimg/node:13.8.0
     steps:
       - checkout
       - restore_cache:
@@ -145,13 +131,17 @@ jobs:
           name: backend scan
           command: |
             cd backend
+            npm install
+            npm audit fix --force --audit-level=critical
+            npm audit fix --force 
             npm audit --audit-level=critical
 
   deploy-infrastructure:
     docker:
-      - image: amazon/aws-cli
+      - image: cimg/base:2022.04
     steps:
       - checkout
+      - install_aws_cli
       - run:
           name: Ensure back-end infrastructure exists
           command: |
@@ -198,9 +188,10 @@ jobs:
 
   configure-infrastructure:
     docker:
-      - image: python:3.9.1-alpine3.12
+      - image: cimg/base:2022.04
     steps:
       - checkout
+      - install_ansible
       - add_ssh_keys:
           fingerprints:
             - "af:a5:4f:74:9a:2b:a5:53:c3:1d:b9:0a:4b:6d:96:b9"
@@ -219,16 +210,16 @@ jobs:
 
   run-migrations:
     docker:
-      - image: circleci/node:13.8.0
+      - image: cimg/node:13.8.0
     steps:
       - checkout
+      - install_aws_cli
       - restore_cache:
           keys: [backend-build]
       - run:
           name: Run migrations
           command: |
             cd backend
-            cat .env
             npm i
             npm run build
             npm run migrations 2>&1 | tee migration-log.txt
@@ -252,18 +243,18 @@ jobs:
 
   deploy-frontend:
     docker:
-      - image: amazon/aws-cli
+      - image: cimg/base:2022.04
     steps:
       - checkout
+      - install_aws_cli
+      - install_nodejs
       - restore_cache:
           keys: [frontend-build]
       - run:
           name: Install dependencies
           command: |
-            yum install -y curl tar sudo
-            curl -sL https://rpm.nodesource.com/setup_13.x | sudo bash -
-            yum install -y nodejs
-            node --version
+            cd frontend
+            npm install
       - run:
           name: Get backend url
           command: |
@@ -285,7 +276,7 @@ jobs:
                     
   deploy-backend:
     docker:
-      - image: python:3.9.1-alpine3.12
+      - image: cimg/base:2022.04
     steps:
       - checkout
       - add_ssh_keys:
@@ -311,7 +302,7 @@ jobs:
 
   smoke-test:
     docker:
-      - image: circleci/node:13.8.0
+      - image: cimg/base:2022.04
     steps:
       - checkout
       - run:
@@ -342,7 +333,7 @@ jobs:
 
   cloudfront-update:
     docker:
-      - image: amazon/aws-cli
+      - image: cimg/base:2022.04
     steps:
       - checkout
       - run:
@@ -374,7 +365,7 @@ jobs:
 
 cleanup:
     docker:
-      - image: amazon/aws-cli
+      - image: cimg/base:2022.04
     steps:
       - checkout
       - run:
@@ -411,7 +402,7 @@ workflows:
           requires: [test-frontend, test-backend, scan-frontend, scan-backend]
           filters:
             branches:
-              only: [test-feature-branch]
+              only: [master]
       - configure-infrastructure:
           requires: [deploy-infrastructure]
       - run-migrations:
