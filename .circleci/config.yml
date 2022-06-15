@@ -183,7 +183,6 @@ jobs:
           root: ~/
           paths:
             - project/.circleci/ansible/inventory.txt
-      
       - destroy-environment
 
   configure-infrastructure:
@@ -194,7 +193,7 @@ jobs:
       - install_awscli
       - install_ansible
       - add_ssh_keys:
-          fingerprints: ["af:a5:4f:74:9a:2b:a5:53:c3:1d:b9:0a:4b:6d:96:b9"]
+          fingerprints: ["3f:71:10:43:5d:55:13:d8:fb:6a:bf:13:59:36:aa:55"]
       - attach_workspace:
           at: ~/
       - run:
@@ -265,7 +264,7 @@ jobs:
       - install_ansible
       - install_nodejs
       - add_ssh_keys:
-          fingerprints: ["af:a5:4f:74:9a:2b:a5:53:c3:1d:b9:0a:4b:6d:96:b9"]
+          fingerprints: ["3f:71:10:43:5d:55:13:d8:fb:6a:bf:13:59:36:aa:55"]
       - attach_workspace:
           at: ~/
       - restore_cache:
