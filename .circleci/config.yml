@@ -391,53 +391,109 @@ jobs:
 
 cleanup:
     docker:
-      - image: cimg/base:2022.04
+      - image: python:3.7-alpine3.11
     steps:
       - checkout
+      - attach_workspace:
+          at: ~/
+      - run:
+          name: Install dependencies
+          command: |
+            apk add --no-cache \
+            python3 \
+            py3-pip \
+            && pip3 install --upgrade pip \
+            && pip3 install \
+                awscli \
+            && rm -rf /var/cache/apk/*
+            apk add --update npm
+            apk add curl
+      - run:
+          name: Get old stack workflow id
+          command: |
+            cat OldWorkflowID.txt
+            export OldWorkflowID=$(cat OldWorkflowID.txt)
+            echo $OldWorkflowID
       - run:
           name: Remove old stacks and files
           command: |
             export OldWorkflowID=$(curl -H "token: ${CIRCLE_WORKFLOW_ID}" \
              --request GET https://api.memstash.io/values/oldworkflowid)
-             
+
             if [[ "${STACKS[@]}" =~ "${OldWorkflowID}" ]]
             then
               aws s3 rm s3://udapeople-"${OldWorkflowID}" --recursive
               aws cloudformation delete-stack --stack-name frontend-"${OldWorkflowID}"
               aws cloudformation delete-stack --stack-name backend-"${OldWorkflowID}"
               aws cloudformation delete-stack --stack-name cloudfront-"${OldWorkflowID}"
+            else
+            echo "cannot cleanup"
             fi
             
 
 workflows:
   default:
     jobs:
+      
       - build-frontend
       - build-backend
       - test-frontend:
-          requires: [build-frontend]
-      - test-backend:
-          requires: [build-backend]
-      - scan-backend:
-          requires: [build-backend]
-      - scan-frontend:
-          requires: [build-frontend]
-      - deploy-infrastructure:
-          requires: [test-frontend, test-backend, scan-frontend, scan-backend]
           filters:
             branches:
-              only: [master]
+              only: master
+          requires: [build-frontend]
+      - test-backend:
+          filters:
+            branches:
+              only: master
+          requires: [build-backend]
+      - scan-backend:
+          filters:
+            branches:
+              only: master
+          requires: [build-backend]
+      - scan-frontend:
+          filters:
+            branches:
+              only: master
+          requires: [build-frontend]
+      - deploy-infrastructure:
+          filters:
+            branches:
+              only: master
+          requires: [test-frontend, test-backend, scan-frontend, scan-backend]
       - configure-infrastructure:
+          filters:
+            branches:
+              only: master
           requires: [deploy-infrastructure]
       - run-migrations:
+          filters:
+            branches:
+              only: main
           requires: [configure-infrastructure]
       - deploy-frontend:
+          filters:
+            branches:
+              only: master
           requires: [run-migrations]
       - deploy-backend:
+          filters:
+            branches:
+              only: main
           requires: [run-migrations]
       - smoke-test:
+          filters:
+            branches:
+              only: master
           requires: [deploy-backend, deploy-frontend]
       - cloudfront-update:
+          filters:
+            branches:
+              only: master
           requires: [smoke-test]
       - cleanup:
+          filters:
+            branches:
+              only: master
           requires: [cloudfront-update]
