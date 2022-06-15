@@ -5,8 +5,7 @@ commands:
     description: Destroy back-end and front-end cloudformation stacks given a workflow ID.
     parameters:
       workflow_id:
-        type: string
-        default: ${CIRCLE_WORKFLOW_ID}  
+        type: string  
     steps:
       - run:
           name: Destroy environments
@@ -18,14 +17,13 @@ commands:
             aws cloudformation delete-stack --stack-name frontend-<<parameters.workflow_id>>
             aws cloudformation delete-stack --stack-name backend-<<parameters.workflow_id>>
       - revert-migrations:
-          workflow_id: <<parameters.workflow_id>>
+          workflow_id: "${CIRCLE_WORKFLOW_ID}"
 
   revert-migrations:
     description: Revert the last migration if successfully run in the current workflow.
     parameters:
       workflow_id:
-        type: string 
-        default: ${CIRCLE_WORKFLOW_ID}   
+        type: string   
     steps:
       - run:
           name: Revert migrations
@@ -141,7 +139,6 @@ jobs:
       - image: cimg/base:2022.04
     steps:
       - checkout
-      - install_aws_cli
       - run:
           name: Ensure back-end infrastructure exists
           command: |
@@ -191,7 +188,6 @@ jobs:
       - image: cimg/base:2022.04
     steps:
       - checkout
-      - install_ansible
       - add_ssh_keys:
           fingerprints:
             - "af:a5:4f:74:9a:2b:a5:53:c3:1d:b9:0a:4b:6d:96:b9"
@@ -213,13 +209,34 @@ jobs:
       - image: cimg/node:13.8.0
     steps:
       - checkout
-      - install_aws_cli
       - restore_cache:
           keys: [backend-build]
+      - run:
+          name: prepare environment for backend build
+          command: |
+            cat \<< EOF > backend/.env
+            ENVIRONMENT=production
+            VERSION=1
+            TYPEORM_CONNECTION=postgres
+            TYPEORM_MIGRATIONS_DIR=./src/migrations
+            TYPEORM_ENTITIES=./src/modules/domain/**/*.entity.ts
+            TYPEORM_MIGRATIONS=./src/migrations/*.ts
+            TYPEORM_HOST=${TYPEORM_HOST}
+            TYPEORM_PORT=${TYPEORM_PORT}
+            TYPEORM_USERNAME=${TYPEORM_USERNAME}
+            TYPEORM_PASSWORD=${TYPEORM_PASSWORD}
+            TYPEORM_DATABASE=${TYPEORM_DATABASE}
+            EOF
+      - run:
+          name: Install dependencies
+          command: |
+            sudo apt update
+            sudo apt install -y awscli
       - run:
           name: Run migrations
           command: |
             cd backend
+            cat .env
             npm i
             npm run build
             npm run migrations 2>&1 | tee migration-log.txt
@@ -246,22 +263,22 @@ jobs:
       - image: cimg/base:2022.04
     steps:
       - checkout
-      - install_aws_cli
-      - install_nodejs
       - restore_cache:
           keys: [frontend-build]
       - run:
           name: Install dependencies
           command: |
-            cd frontend
-            npm install
+            yum install -y curl tar sudo
+            curl -sL https://rpm.nodesource.com/setup_13.x | sudo bash -
+            yum install -y nodejs
+            node --version
       - run:
           name: Get backend url
           command: |
             export API_URL=$(curl -H "token: ${CIRCLE_WORKFLOW_ID}" \
               --request GET https://api.memstash.io/values/backendurl)
             export API_URL="http://${BACKEND_IP}:3030"
-            echo "${API_URL}"
+            echo "${API_URL}" > .circleci/api_url.txt
       - run:
           name: Deploy frontend objects
           command: |
@@ -291,6 +308,11 @@ jobs:
           command: |
             apk update
             apk add --update ansible aws-cli openssh-client tar
+
+      - run:
+          name: compress backend
+          command: |
+            tar -C /tmp/artifacts/backend -czvf artifact.tar.gz .
       - run:
           name: Deploy backend
           command: |
@@ -346,22 +368,26 @@ jobs:
             export OldWorkflowID=$(aws cloudformation \
               list-exports --query "Exports[?Name==\`WorkflowID\`].Value" \
               --no-paginate --output text)
+
             export STACKS=($(aws cloudformation list-stacks --query "StackSummaries[*].StackName" \
               --stack-status-filter CREATE_COMPLETE --no-paginate --output text))
+            
             echo "${OldWorkflowID}"
             echo "${STACKS[@]}"
+            
             # save oldworkflowid for the cleanup phase
             curl -H "Content-Type: text/plain" -H "token: ${CIRCLE_WORKFLOW_ID}" \
               --request PUT --data "${OldWorkflowID}" \
                 https://api.memstash.io/values/oldworkflowid
+            
             # promote
             aws cloudformation update-stack \
               --use-previous-template \
               --stack-name cloudfront-${OldWorkflowID} \
               --parameters ParameterKey=WorkflowID,ParameterValue=$CIRCLE_WORKFLOW_ID,UsePreviousValue=false
-      # Here's where you will add some code to rollback on failure 
+      # Here's where you will add some code to rollback on failure
       - destroy-environment:
-          workflow_id: "${CIRCLE_WORKFLOW_ID}" 
+          workflow_id: "${CIRCLE_WORKFLOW_ID}"
 
 cleanup:
     docker:
@@ -369,13 +395,11 @@ cleanup:
     steps:
       - checkout
       - run:
-          name: Get old stack workflow id
-          command: |
-           export OldWorkflowID=$(curl -H "token: ${CIRCLE_WORKFLOW_ID}" \
-             --request GET https://api.memstash.io/values/oldworkflowid)
-      - run:
           name: Remove old stacks and files
           command: |
+            export OldWorkflowID=$(curl -H "token: ${CIRCLE_WORKFLOW_ID}" \
+             --request GET https://api.memstash.io/values/oldworkflowid)
+             
             if [[ "${STACKS[@]}" =~ "${OldWorkflowID}" ]]
             then
               aws s3 rm s3://udapeople-"${OldWorkflowID}" --recursive
