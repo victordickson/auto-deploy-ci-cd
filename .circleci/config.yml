@@ -306,11 +306,21 @@ jobs:
 
   smoke-test:
     docker:
-      - image: cimg/base:stable
+      - image: python:3.7-alpine3.11
     steps:
       - checkout
-      - install_awscli
-      - install_nodejs
+      - run:
+          name: Install dependencies
+          command: |
+            apk add --no-cache \
+            python3 \
+            py3-pip \
+            && pip3 install --upgrade pip \
+            && pip3 install \
+                awscli \
+            && rm -rf /var/cache/apk/*
+            apk add --update npm
+            apk add curl
       - run:
           name: Backend smoke test.
           command: |
