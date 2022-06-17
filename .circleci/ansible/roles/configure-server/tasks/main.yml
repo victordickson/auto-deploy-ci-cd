@@ -1,31 +1,16 @@
 ---
-- name: "update apt packages."
-  become: yes
+- name: "Add Node.js from Nodesource"
+  become: true
+  shell: |
+    curl -sL https://deb.nodesource.com/setup_13.x | sudo -E bash -
+- name: "Install Node.js 13"
+  become: true
   apt:
-    update_cache: yes
-
-- name: "upgrade packages"
-  become: yes
-  apt:
-    upgrade: yes
-
-- name: "install dependencies."
-  become: yes
-  apt:
-    name: ["nodejs", "npm"]
+    name: ["nodejs"]
     state: latest
     update_cache: yes
 
-- name: ENV
-  become_user: root
-  shell: |
-    export TEST=12
-    export TYPEORM_CONNECTION=$({{ lookup('env', 'TYPEORM_CONNECTION')}})
-    export TYPEORM_ENTITIES=$({{ lookup('env', 'TYPEORM_ENTITIES')}})
-    export TYPEORM_HOST=$({{ lookup('env', 'TYPEORM_HOST')}})
-    export TYPEORM_PORT=$({{ lookup('env', 'TYPEORM_PORT')}})
-    export TYPEORM_USERNAME=$({{ lookup('env', 'TYPEORM_USERNAME')}})
-    export TYPEORM_PASSWORD=$({{ lookup('env', 'TYPEORM_PASSWORD')}})
-    export TYPEORM_DATABASE=$({{ lookup('env', 'TYPEORM_DATABASE')}})
-    export TYPEORM_MIGRATIONS=$({{ lookup('env', 'TYPEORM_MIGRATIONS')}})
-    export TYPEORM_MIGRATIONS_DIR=$({{ lookup('env', 'TYPEORM_MIGRATIONS_DIR')}})
+- name: "Install PM2 Globally"
+  npm:
+    name: pm2
+    global: yes

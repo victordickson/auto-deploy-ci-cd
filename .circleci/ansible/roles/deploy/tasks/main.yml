@@ -1,66 +1,30 @@
 ---
-- name: "update apt packages."
-  become: yes
-  apt:
-    update_cache: yes
-
-- name: "upgrade packages"
-  become: yes
-  apt:
-    upgrade: yes
-
-- name: remove dependencies that are no longer required
-  become: yes
-  apt:
-    autoremove: yes
-
-- name: "install dependencies."
-  become: yes
-  apt:
-    name: ["nodejs", "npm", "tar"]
-    state: latest
-    update_cache: yes
-
-- name: "install pm2"
-  become: yes
-  npm:
-    name: pm2
-    global: yes
-    production: yes
-    state: present
-
-- name: Creates directory
+- name: "Creates backend app directory"
   file:
-    path: /home/ec2-user/backend
+    path: ~/backend-app
     state: directory
 
-- name: Copy index test page
-  ansible.builtin.unarchive:
+- name: "Unarchive backend files"
+  unarchive:
     src: artifact.tar.gz
-    dest: /home/ec2-user/backend
+    dest: ~/backend-app
 
-- name: Unzip
+- name: "Installing Node Dependencies"
   shell: |
-    cd /home/ec2-user/backend
-    tar xvzf artifact.tar.gz -C .
-    npm install
+    cd ~/backend-app
+    npm i
+- name: "Executing Node app with PM2"
+  shell: |
+    cd ~/backend-app/dist
     pm2 stop default
-    pm2 start npm -- start
+    pm2 start main.js
+  register: execute_node
 
-- name: Install node
-  shell: |
-    cd /home/ec2-user/backend
-    npm install
+- name: print message
+  debug:
+    msg: "{{ execute_node.stdout_lines }}"
 
-- name: Run pm
+- name: "Configure pm2 to start as service"
+  become: true
   shell: |
-    export ENVIRONMENT=production
-    export NODE_ENV=production
-    export TYPEORM_HOST="{{ lookup('env', 'TYPEORM_HOST') }}"
-    export TYPEORM_ENTITIES="{{ lookup('env', 'TYPEORM_ENTITIES') }}"
-    export TYPEORM_USERNAME="{{ lookup('env', 'TYPEORM_USERNAME') }}"
-    export TYPEORM_PASSWORD="{{ lookup('env', 'TYPEORM_PASSWORD') }}"
-    export TYPEORM_DATABASE="{{ lookup('env', 'TYPEORM_DATABASE') }}"
-    cd /home/ubuntu/backend
-    pm2 stop default
-    pm2 start npm --name backend -- start
+    env PATH=$PATH:/usr/local/bin pm2 startup systemd -u ec2-user --hp /home/ec2-user
