@@ -276,22 +276,29 @@ jobs:
       - restore_cache:
           keys: [backend-deps]
       - attach_workspace:
-          at: /tmp/artifacts
+          at: ~/
       - run:
           name: Install dependencies
           command: |
+            cd backend
             apk update
             apk add --update ansible aws-cli openssh-client tar
       - run:
-          name: compress backend
+          name: package backend
           command: |
-            tar -C /tmp/artifacts/backend -czvf artifact.tar.gz .
+            cd backend
+            tar -czf artifact.tar.gz dist/* package*
+            cd ..
+            cp backend/artifact.tar.gz .circleci/ansible/roles/deploy/files
       - run:
           name: Deploy backend
           command: |
+            export TYPEORM_MIGRATIONS_DIR=./migrations
+            export TYPEORM_ENTITIES=./modules/domain/**/*.entity{.ts,.js}
+            export TYPEORM_MIGRATIONS=./migrations/*.ts
             cd .circleci/ansible
-            export ANSIBLE_HOST_KEY_CHECKING=False
-            ansible-playbook -i /tmp/artifacts/inventory.txt deploy-backend.yml
+            cat inventory.txt
+            ansible-playbook -i inventory.txt deploy-backend.yml
       - destroy-environment
       - revert-migrations
 
