@@ -10,6 +10,7 @@ commands:
             curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
             unzip awscliv2.zip
             sudo ./aws/install
+
   install_ansible:
     description: Install Ansible
     steps:
@@ -20,6 +21,7 @@ commands:
             sudo apt install software-properties-common -y
             sudo add-apt-repository --yes --update ppa:ansible/ansible
             sudo apt install ansible -y
+
   install_nodejs:
     description: Install Node.js 13
     steps:
@@ -28,6 +30,7 @@ commands:
           command: |
             curl -fsSL https://deb.nodesource.com/setup_13.x | sudo -E bash -
             sudo apt install -y nodejs
+
   destroy-environment:
     description: Destroy back-end and front-end cloudformation stacks given a workflow ID.
     parameters:
@@ -42,6 +45,7 @@ commands:
             aws cloudformation delete-stack --stack-name udapeople-backend-<< parameters.Workflow_ID >>
             aws s3 rm s3://udapeople-<<parameters.Workflow_ID>> --recursive
             aws cloudformation delete-stack --stack-name udapeople-frontend-<< parameters.Workflow_ID >>
+
   revert-migrations:
     description: Revert the last migration
     parameters:
@@ -53,7 +57,7 @@ commands:
           name: Revert migrations
           when: on_fail
           command: |
-            SUCCESS=$(curl --insecure  https://kvdb.io/DWWjxsPKNSRSM6jvbL5UmG/migration_<< parameters.Workflow_ID >>)
+            SUCCESS=$(curl --insecure  https://kvdb.io/${KVDB_BUCKET}/migration_<< parameters.Workflow_ID >>)
             # Logic for reverting the database state
             if (( $SUCCESS == 1 ));
             then
@@ -61,6 +65,7 @@ commands:
               npm install
               npm run migration:revert
             fi
+
 jobs:
   build-frontend:
     docker:
@@ -78,6 +83,7 @@ jobs:
       - save_cache:
           paths: [frontend/node_modules]
           key: frontend-deps
+
   build-backend:
     docker:
       - image: cimg/node:13.8.0
@@ -94,6 +100,7 @@ jobs:
       - save_cache:
           paths: [backend/node_modules]
           key: backend-deps
+
   test-frontend:
     docker:
       - image: cimg/node:13.8.0
@@ -107,6 +114,7 @@ jobs:
             cd frontend
             npm install
             npm test
+
   test-backend:
     docker:
       - image: cimg/node:13.8.0
@@ -120,6 +128,7 @@ jobs:
             cd backend
             npm install
             npm test
+
   scan-frontend:
     docker:
       - image: cimg/node:13.8.0
@@ -134,6 +143,7 @@ jobs:
             npm install
             npm audit fix --force --audit-level=critical
             npm audit --audit-level=critical
+
   scan-backend:
     docker:
       - image: cimg/node:13.8.0
@@ -149,6 +159,7 @@ jobs:
             npm audit fix --force --audit-level=critical
             npm audit fix --force --audit-level=critical
             npm audit --audit-level=critical
+
   deploy-infrastructure:
     docker:
       - image: cimg/base:stable
@@ -163,6 +174,7 @@ jobs:
               --tags project=udapeople \
               --stack-name "udapeople-backend-${CIRCLE_WORKFLOW_ID:0:7}" \
               --parameter-overrides ID="${CIRCLE_WORKFLOW_ID:0:7}"
+
       - run:
           name: Ensure front-end infrastructure exist
           command: |
@@ -171,6 +183,7 @@ jobs:
               --tags project=udapeople \
               --stack-name "udapeople-frontend-${CIRCLE_WORKFLOW_ID:0:7}" \
               --parameter-overrides ID="${CIRCLE_WORKFLOW_ID:0:7}"
+
       - run:
           name: Add back-end ip to ansible inventory
           command: |
@@ -180,10 +193,12 @@ jobs:
               --output text)
             echo $BACKEND_PUBLIC_IP >> .circleci/ansible/inventory.txt
             cat .circleci/ansible/inventory.txt
+
       - persist_to_workspace:
           root: ~/
           paths:
             - project/.circleci/ansible/inventory.txt
+
       - destroy-environment
 
   configure-infrastructure:
@@ -204,6 +219,7 @@ jobs:
             cat inventory.txt
             ansible-playbook -i inventory.txt configure-server.yml
       - destroy-environment
+
   run-migrations:
     docker:
       - image: cimg/node:13.8.0
@@ -215,24 +231,17 @@ jobs:
           command: |
             cd backend
             npm install
-            npm run migrations:revert
             npm run migrations > migrations_dump.txt
-            echo `cat migrations_dump.txt`
       - run:
-          name: print migrations
+          name: Send migration status to kvdb.io
           command: |
-            cd backend
-            echo `cat migrations_dump.txt`
-      - run:
-          name: Send migration results to kvdb.io
-          command: |
-            cd backend
-            if grep -q "has been executed successfully." migrations_dump.txt
+            if grep -q "has been executed successfully." ~/project/backend/migrations_dump.txt
             then
-              curl --insecure https://kvdb.io/DWWjxsPKNSRSM6jvbL5UmG/migration_${CIRCLE_WORKFLOW_ID:0:7}  -d '1'
+              curl https://kvdb.io/${KVDB_BUCKET}/migration_${CIRCLE_WORKFLOW_ID:0:7}  -d '1'
             fi
       - destroy-environment
       - revert-migrations
+
   deploy-frontend:
     docker:
       - image: cimg/base:stable
@@ -254,18 +263,19 @@ jobs:
               --filters "Name=tag:Name,Values=backend-${CIRCLE_WORKFLOW_ID:0:7}" \
               --query 'Reservations[*].Instances[*].PublicIpAddress' \
               --output text)
+
             echo "API_URL=http://${BACKEND_PUBLIC_IP}:3030" >> frontend/.env
             cat frontend/.env
       - run:
           name: Deploy frontend objects
           command: |
             cd frontend
-            npm i
             npm run build
-            tar -czvf artifact-"${CIRCLE_WORKFLOW_ID:0:7}".tar.gz dist
             aws s3 cp dist s3://udapeople-${CIRCLE_WORKFLOW_ID:0:7} --recursive
+
       - destroy-environment
       - revert-migrations
+
   deploy-backend:
     docker:
       - image: cimg/base:stable
@@ -291,6 +301,7 @@ jobs:
             cd backend
             npm run build
             tar -czf artifact.tar.gz dist/* package*
+
             cd ..
             cp backend/artifact.tar.gz .circleci/ansible/roles/deploy/files
       - run:
@@ -299,9 +310,11 @@ jobs:
             export TYPEORM_MIGRATIONS_DIR=./migrations
             export TYPEORM_ENTITIES=./modules/domain/**/*.entity{.ts,.js}
             export TYPEORM_MIGRATIONS=./migrations/*.ts
+
             cd .circleci/ansible
             cat inventory.txt
             ansible-playbook -i inventory.txt deploy-backend.yml
+
       - destroy-environment
       - revert-migrations
 
@@ -319,9 +332,8 @@ jobs:
               --filters "Name=tag:Name,Values=backend-${CIRCLE_WORKFLOW_ID:0:7}" \
               --query 'Reservations[*].Instances[*].PublicIpAddress' \
               --output text)
-            echo "${BACKEND_PUBLIC_IP}"
-            export API_URL="http://${BACKEND_PUBLIC_IP}:3030"
-            echo "${API_URL}"
+
+            export API_URL=http://${BACKEND_PUBLIC_IP}:3030
             if curl -s $API_URL/api/status | grep "ok"
             then
               exit 0
@@ -331,9 +343,8 @@ jobs:
       - run:
           name: Frontend smoke test.
           command: |
-            URL=http://udapeople-${CIRCLE_WORKFLOW_ID:0:7}.s3-website.${AWS_DEFAULT_REGION}.amazonaws.com
-            echo ${URL} 
-            if curl -s ${URL} | grep "Welcome"
+            FRONTEND_WEBSITE=http://udapeople-${CIRCLE_WORKFLOW_ID:0:7}.s3-website.${AWS_DEFAULT_REGION}.amazonaws.com
+            if curl -s $FRONTEND_WEBSITE | grep "Welcome"
             then
               exit 0
             else
@@ -356,7 +367,7 @@ jobs:
                       list-exports --query "Exports[?Name==\`WorkflowID\`].Value" \
                       --no-paginate --output text)
             echo "Old Wokflow ID: $OLD_WORKFLOW_ID"
-            curl https://kvdb.io/DWWjxsPKNSRSM6jvbL5UmG/old_workflow_id -d "${OLD_WORKFLOW_ID}"
+            curl https://kvdb.io/${KVDB_BUCKET}/old_workflow_id -d "${OLD_WORKFLOW_ID}"
       - run:
           name: Update cloudfront distribution
           command: |
@@ -366,6 +377,7 @@ jobs:
               --stack-name InitialStack
       - destroy-environment
       - revert-migrations
+
   cleanup:
     docker:
       - image: cimg/base:stable
@@ -380,14 +392,17 @@ jobs:
                 --query "StackSummaries[*].StackName" \
                 --stack-status-filter CREATE_COMPLETE --no-paginate --output text)) 
             echo Stack names: "${STACKS[@]}"
-            export OldWorkflowID=$(curl --insecure https://kvdb.io/DWWjxsPKNSRSM6jvbL5UmG/old_workflow_id)
+
+            export OldWorkflowID=$(curl --insecure https://kvdb.io/${KVDB_BUCKET}/old_workflow_id)
             echo Old Workflow ID: $OldWorkflowID 
+
             if [[ "${STACKS[@]}" =~ "${OldWorkflowID}" ]]
             then
               aws s3 rm "s3://udapeople-${OldWorkflowID}" --recursive
               aws cloudformation delete-stack --stack-name "udapeople-backend-${OldWorkflowID}"
               aws cloudformation delete-stack --stack-name "udapeople-frontend-${OldWorkflowID}"
             fi
+
 workflows:
   default:
     jobs:
