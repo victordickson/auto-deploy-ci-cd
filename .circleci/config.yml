@@ -268,25 +268,28 @@ jobs:
       - revert-migrations
   deploy-backend:
     docker:
-      - image: python:3.9.1-alpine3.12
+      - image: cimg/base:stable
     steps:
       - checkout
+      - install_awscli
+      - install_ansible
+      - install_nodejs
       - add_ssh_keys:
           fingerprints: ["0d:be:86:40:43:b1:22:9e:e3:f3:32:a3:7c:1c:c2:bd"]
-      - restore_cache:
-          keys: [backend-deps]
       - attach_workspace:
           at: ~/
+      - restore_cache:
+          keys: [backend-deps]
       - run:
           name: Install dependencies
           command: |
             cd backend
-            apk update
-            apk add --update ansible aws-cli openssh-client tar
+            npm install
       - run:
-          name: package backend
+          name: Package Backend
           command: |
             cd backend
+            npm run build
             tar -czf artifact.tar.gz dist/* package*
             cd ..
             cp backend/artifact.tar.gz .circleci/ansible/roles/deploy/files
