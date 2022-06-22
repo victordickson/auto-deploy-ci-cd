@@ -326,11 +326,12 @@ jobs:
             --filter Name=tag:Name,Values="backend-${CIRCLE_WORKFLOW_ID:0:7}")
             
             export API_URL="http://${BACKEND_PUBLIC_IP}:3030"
-            if curl -s $API_URL/api/status | grep "ok"
+            echo "${API_URL}"
+            if curl -s ${API_URL}/api/status | grep "ok"
             then 
-              exit 0
+              return 0
             else 
-              exit 1
+              return 1
             fi 
       - run:
           name: Frontend smoke test.
