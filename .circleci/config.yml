@@ -188,7 +188,7 @@ jobs:
           name: Add back-end ip to ansible inventory
           command: |
             BACKEND_PUBLIC_IP=$(aws ec2 describe-instances \
-              --filters "Name=tag:Name,Values=backend-${CIRCLE_WORKFLOW_ID:0:7}" \
+              --filter Name=tag:Name,Values="backend-${CIRCLE_WORKFLOW_ID:0:7}" \
               --query 'Reservations[*].Instances[*].PublicIpAddress' \
               --output text)
             echo $BACKEND_PUBLIC_IP >> .circleci/ansible/inventory.txt
@@ -260,7 +260,11 @@ jobs:
           name: Get backend url
           command: |
             BACKEND_PUBLIC_IP=$(aws ec2 describe-instances \
+<<<<<<< HEAD
               --filters "Name=tag:Name,Values=backend-${CIRCLE_WORKFLOW_ID:0:7}" \
+=======
+              --filter Name=tag:Name,Values="backend-${CIRCLE_WORKFLOW_ID:0:7}" \
+>>>>>>> d8ccf4f2e56f73ae5839c85d3e7cb59c491b2b24
               --query 'Reservations[*].Instances[*].PublicIpAddress' \
               --output text)
 
@@ -328,9 +332,9 @@ jobs:
             echo "${API_URL}"
             if curl -s ${API_URL}/api/status | grep "ok"
             then 
-              exit 0
+              return 0
             else 
-              exit 1
+              return 1
             fi 
       - run:
           name: Frontend smoke test.
