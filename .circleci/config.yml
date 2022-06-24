@@ -408,5 +408,5 @@ workflows:
       - cloudfront-update:
           requires: [smoke-test]
       # Comment out the next 2 lines if you want to persist your infrastructure
-      # - cleanup:
-      #     requires: [add-prometheus-node-exporter, cloudfront-update]
+      - cleanup:
+           requires: [add-prometheus-node-exporter, cloudfront-update]
