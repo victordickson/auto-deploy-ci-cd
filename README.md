@@ -1,8 +1,4 @@
-We are archiving this repository because we do not want learners to push personal development to the current repository. If you have any issues or suggestions to make, feel free to:
-- Utilize the https://knowledge.udacity.com/ forum to seek help on content-specific issues.
-- [Submit a support ticket](https://udacity.zendesk.com/hc/en-us/requests/new) along with the link to your forked repository. 
-- If you are an enterprise learner, please [Submit a support ticket here](https://udacityenterprise.zendesk.com/hc/en-us/requests/new?ticket_form_id=360000279131)
-
+[![CircleCI](https://dl.circleci.com/status-badge/img/gh/victordickson/udapeople-app/tree/master.svg?style=svg)](https://dl.circleci.com/status-badge/redirect/gh/victordickson/udapeople-app/tree/master)
 
 ## Give your Application Auto-Deploy Superpowers
 
