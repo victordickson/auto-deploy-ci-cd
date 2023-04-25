@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 /* .navbar-button {
   background-color: rgba(0, 0, 0, 0);
   color: #fff;
@@ -17,3 +18,24 @@
 .navbar-button span {
   margin-left: 10px;
 } */
+=======
+/* .navbar-button {
+  background-color: rgba(0, 0, 0, 0);
+  color: #fff;
+  border: none;
+  font-size: 16px;
+  margin-left: 28px;
+}
+
+.disabled {
+  color: #92a3c5;
+}
+
+.navbar-button:hover:enabled {
+  background-color: inherit;
+}
+
+.navbar-button span {
+  margin-left: 10px;
+} */
+>>>>>>> c66a194ed828982ae51a56ee1c6a93206da232a9

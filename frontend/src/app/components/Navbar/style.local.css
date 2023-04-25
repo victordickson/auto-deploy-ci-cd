@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 .navbar {
   height: 60px;
   background-color: #fff;
@@ -11,3 +12,18 @@
   width: 180px;
   height: 60%;
 }
+=======
+.navbar {
+  height: 60px;
+  background-color: #fff;
+  padding: 0 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.logo {
+  width: 180px;
+  height: 60%;
+}
+>>>>>>> c66a194ed828982ae51a56ee1c6a93206da232a9
