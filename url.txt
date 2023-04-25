@@ -1,0 +1,9 @@
+1. Public Url to GitHub repository (not private) [URL01]
+
+[URL01]  --> https://github.com/victordickson/udapeople-app
+
+2. Public URL for your S3 Bucket (aka, your green candidate front-end) [URL02]
+
+[URL02]
+S3 --> http://udapeople-e582faf.s3-website-us-east-1.amazonaws.com
+Cloudfront --> https://d31n1jgmsz8tjg.cloudfront.net
