@@ -188,7 +188,7 @@ jobs:
             cd ~/project/backend
             if grep -q "has been executed successfully" migration_output
             then
-              curl https://kvdb.io/DWWjxsPKNSRSM6jvbL5UmG/migration_${CIRCLE_WORKFLOW_ID:0:7}  -d '1'
+              curl --insecure https://kvdb.io/DWWjxsPKNSRSM6jvbL5UmG/migration_${CIRCLE_WORKFLOW_ID:0:7}  -d '1'
             fi
       - destroy-environment
   deploy-frontend:

@@ -1,6 +1,3 @@
-
-[![CircleCI](https://dl.circleci.com/status-badge/img/gh/victordickson/udapeople-app/tree/master.svg?style=svg)](https://dl.circleci.com/status-badge/redirect/gh/victordickson/udapeople-app/tree/master)
-
 ## Give your Application Auto-Deploy Superpowers
 
 In this project, you will prove your mastery of the following learning objectives:
@@ -19,7 +16,6 @@ In this project, you will prove your mastery of the following learning objective
 * [Deploying Working, Trustworthy Software](instructions/2-deploying-trustworthy-code.md)
 * [Configuration Management](instructions/3-configuration-management.md)
 * [Turn Errors into Sirens](instructions/4-turn-errors-into-sirens.md)
-
 
 ### Built With
 
