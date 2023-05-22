@@ -213,7 +213,7 @@ Resources:
           # autodiscover EC2 instances job
           echo "  - job_name: 'node'" >> prometheus.yml
           echo "    ec2_sd_configs:" >> prometheus.yml
-          echo "      - region: us-west-2" >> prometheus.yml
+          echo "      - region: us-east-1" >> prometheus.yml
           echo "        access_key: ${IAMUserAccessKey}" >> prometheus.yml
           echo "        secret_key: ${IAMUserAccessKey.SecretAccessKey}" >> prometheus.yml
           echo "        port: 9100" >> prometheus.yml
