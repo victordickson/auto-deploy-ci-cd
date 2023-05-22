@@ -1,26 +1,36 @@
 import * as React from 'react';
-import { Button } from '../Button';
-import style from './style.local.css';
+import { Component } from 'react';
 
-export namespace NavbarButton {
+import style from './style.local.css';
+import { Button } from '../../Button';
+
+export namespace NoFilteredOrders {
   export interface Props {
-    title?: string;
-    children: any;
-    style?: React.CSSProperties;
-    className?: string;
-    onClick?(): void;
+    searchText: string;
+    handleResetOrders: (searchText: string) => void;
   }
 }
 
-export const NavbarButton = (props: NavbarButton.Props) => {
-  return (
-    <Button
-      onClick={props.onClick}
-      title={props.title}
-      className={`${style['navbar-button']} ${style[props.className || '']}`}
-      style={props.style}
-    >
-      {props.children}
-    </Button>
-  );
-};
+export class NoFilteredOrders extends Component<NoFilteredOrders.Props> {
+  render() {
+    return (
+      <div className={style['no-orders']}>
+        <span className={style.icon} />
+        <h3 className={style.title}>{`We couldn't find any orders related to "${
+          this.props.searchText
+        }"`}</h3>
+        <span>
+          Please try with a different order number,
+          <br />
+          recipient name or company.
+        </span>
+        <Button
+          onClick={() => this.props.handleResetOrders('')}
+          className={style.Rectangle}
+        >
+          Back to all orders
+        </Button>
+      </div>
+    );
+  }
+}
